@@ -19,8 +19,8 @@ export const connectDB = async () => {
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.warn('⚠️  MongoDB unavailable — history features disabled.');
-    console.warn(`   Reason: ${error.message}`);
-    console.warn('   💡 Fix: Whitelist your IP in MongoDB Atlas → Network Access → Add 0.0.0.0/0');
+    console.warn(`Reason: ${error.message}`);
+    console.warn('💡 Fix: Whitelist your IP in MongoDB Atlas → Network Access → Add 0.0.0.0/0');
   }
 };
 
