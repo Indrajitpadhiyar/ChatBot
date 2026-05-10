@@ -1,0 +1,42 @@
+import mongoose from 'mongoose';
+
+// Schema for individual messages within a chat session
+const messageSchema = new mongoose.Schema({
+  role: {
+    type: String,
+    enum: ['user', 'ai'],
+    required: true,
+  },
+  content: {
+    type: String,
+    required: true,
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// Schema for a full chat session
+const chatSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      default: 'New Chat',
+    },
+    messages: [messageSchema],
+  },
+  { timestamps: true }
+);
+
+// Auto-generate title from first user message
+chatSchema.pre('save', function () {
+  if (this.isNew && this.messages.length > 0) {
+    const firstMsg = this.messages[0].content;
+    this.title = firstMsg.length > 45 ? firstMsg.slice(0, 45) + '...' : firstMsg;
+  }
+});
+
+const Chat = mongoose.model('Chat', chatSchema);
+
+export default Chat;
