@@ -16,7 +16,7 @@ export const connectDB = async () => {
       serverSelectionTimeoutMS: 5000,
     });
     isConnected = true;
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB Connected`);
   } catch (error) {
     console.warn('⚠️  MongoDB unavailable — history features disabled.');
     console.warn(`Reason: ${error.message}`);

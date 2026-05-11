@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { PanelLeft } from 'lucide-react';
+import { PanelLeft, LogOut } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import ChatInput from './components/ChatInput';
 import ModelSelector from './components/ModelSelector';
+import Login from './components/Login';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 function App() {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -15,12 +19,40 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]); // sidebar list
   const [aiModel, setAiModel] = useState('idr-ai-v1'); // selected AI model
 
+  useEffect(() => {
+    // Restore session
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  const handleLoginSuccess = (userData, userToken) => {
+    setUser(userData);
+    setToken(userToken);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setToken(null);
+    setMessages([]);
+    setChatId(null);
+    setChatHistory([]);
+  };
+
   const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
   // ── Fetch sidebar chat history ──────────────────────────────────────────────
   const fetchHistory = async () => {
+    if (!token) return;
     try {
-      const res = await fetch(`${API_URL}/chat/history`);
+      const res = await fetch(`${API_URL}/chat/history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const data = await res.json();
       if (data.success) setChatHistory(data.chats);
     } catch (err) {
@@ -29,8 +61,8 @@ function App() {
   };
 
   useEffect(() => {
-    fetchHistory();
-  }, []);
+    if (token) fetchHistory();
+  }, [token]);
 
   // ── Start a new blank chat ──────────────────────────────────────────────────
   const handleNewChat = () => {
@@ -74,7 +106,10 @@ function App() {
     try {
       const res = await fetch(`${API_URL}/chat/send`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
         body: JSON.stringify({ message: text, chatId, aiModel }),
       });
 
@@ -105,6 +140,10 @@ function App() {
     }
   };
 
+  if (!token) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="flex h-screen bg-[#0b0f19] text-gray-100 overflow-hidden font-sans selection:bg-blue-500/30">
       <Sidebar
@@ -134,10 +173,22 @@ function App() {
             <button className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors hidden sm:block px-3">
               Upgrade Plan
             </button>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-400 to-blue-500 p-[1.5px] shadow-sm cursor-pointer hover:shadow-emerald-500/20 transition-shadow">
-              <div className="w-full h-full bg-[#111827] rounded-full border border-transparent flex items-center justify-center">
-                <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">IDR</span>
+            <div className="flex items-center space-x-3 bg-[#1f2937]/50 rounded-full pl-3 pr-1 py-1 border border-gray-800/60 shadow-sm">
+              <span className="text-sm font-medium text-gray-300 hidden md:block tracking-wide">{user?.name?.split(' ')[0] || 'User'}</span>
+              <div className="relative group">
+                <img 
+                  src={user?.picture || `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=10b981&color=fff`} 
+                  alt="Profile" 
+                  className="w-8 h-8 rounded-full border border-gray-600 shadow-sm" 
+                />
               </div>
+              <button 
+                onClick={handleLogout} 
+                className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-colors ml-1 focus:outline-none" 
+                title="Log out"
+              >
+                <LogOut size={16} />
+              </button>
             </div>
           </div>
         </header>
