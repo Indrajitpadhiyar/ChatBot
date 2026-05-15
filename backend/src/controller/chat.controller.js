@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import Chat from '../../models/Chat.js';
-import { getIsConnected } from '../../database/connection.js';
+import Chat from '../models/Chat.js';
+import { getIsConnected } from '../database/connection.js';
 
 // Initialize Gemini client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -8,11 +8,11 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // ─── POST /api/chat/send ───────────────────────────────────────────────────────
 export const sendMessage = async (req, res) => {
   const { message, chatId, aiModel } = req.body;
-  
-  // Handle custom IDR AI mapping
+
+  // Handle custom IDR AI mapping 
   let selectedModel = aiModel || 'gemini-2.5-flash';
   let systemInstruction = undefined;
-  
+
   if (selectedModel === 'idr-ai-v1') {
     selectedModel = 'gemini-2.5-flash';
     systemInstruction = {

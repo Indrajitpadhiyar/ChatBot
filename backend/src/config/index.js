@@ -7,4 +7,7 @@ export const config = {
   cloudinaryApi: process.env.CLOUDINARY_API,
   cloudinaryName: process.env.CLOUDINARY_NAME,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  jwtSecret: process.env.JWT_SECRET,
 };

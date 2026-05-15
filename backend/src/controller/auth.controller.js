@@ -1,7 +1,7 @@
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import User from '../../models/User.js';
+import User from '../models/User.js';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'placeholder');
 
@@ -16,7 +16,7 @@ const generateToken = (user) => {
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    
+
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, error: 'Please provide all required fields' });
     }
@@ -48,7 +48,7 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Please provide email and password' });
     }
@@ -82,7 +82,7 @@ export const login = async (req, res) => {
 export const googleLogin = async (req, res, next) => {
   try {
     const { credential } = req.body;
-    
+
     if (!credential) {
       return res.status(400).json({ success: false, error: 'Token missing' });
     }
@@ -91,7 +91,7 @@ export const googleLogin = async (req, res, next) => {
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID || 'placeholder',
     });
-    
+
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
 
