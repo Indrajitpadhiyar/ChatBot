@@ -10,6 +10,7 @@ const Sidebar = ({
   onLoadChat,
   onDeleteChat,
   activeChatId,
+  onSettingsClick,
 }) => {
   return (
     <>
@@ -26,9 +27,8 @@ const Sidebar = ({
         )}
       </AnimatePresence>
 
-      {/* Sidebar panel */}
       <div
-        className={`fixed md:static inset-y-0 left-0 z-30 bg-[#0b0f19] transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] shadow-2xl md:shadow-none h-full overflow-hidden flex flex-col
+        className={`fixed md:static inset-y-0 left-0 z-30 bg-[var(--bg-sidebar)] transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] shadow-2xl md:shadow-none h-full overflow-hidden flex flex-col
           ${isOpen ? 'w-[280px] translate-x-0 border-r border-[#1f2937]' : 'w-[280px] -translate-x-full md:translate-x-0 md:w-0 border-r border-transparent md:border-none'}`}
       >
         <div className="w-[280px] h-full flex flex-col shrink-0">
@@ -93,7 +93,7 @@ const Sidebar = ({
 
           {/* Footer */}
           <div className="p-4 border-t border-[#1f2937]/50 mt-auto">
-            <button className="w-full flex items-center space-x-3 px-3 py-3 text-gray-400 hover:text-white hover:bg-[#1f2937]/80 rounded-xl transition-colors group">
+            <button onClick={onSettingsClick} className="w-full flex items-center space-x-3 px-3 py-3 text-gray-400 hover:text-white hover:bg-[#1f2937]/80 rounded-xl transition-colors group">
               <Settings size={18} className="group-hover:rotate-45 transition-transform duration-300" />
               <span className="text-sm font-medium">Settings</span>
             </button>

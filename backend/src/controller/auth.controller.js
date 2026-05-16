@@ -37,7 +37,7 @@ export const register = async (req, res) => {
     res.status(201).json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, picture: user.picture }
+      user: { id: user._id, name: user.name, email: user.email, picture: user.picture, theme: user.theme }
     });
   } catch (error) {
     console.error('Register error:', error);
@@ -71,7 +71,7 @@ export const login = async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, picture: user.picture }
+      user: { id: user._id, name: user.name, email: user.email, picture: user.picture, theme: user.theme }
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -115,11 +115,27 @@ export const googleLogin = async (req, res, next) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        picture: user.picture
+        picture: user.picture,
+        theme: user.theme
       }
     });
   } catch (error) {
     console.error('Google login error:', error);
     res.status(500).json({ success: false, error: 'Authentication failed' });
+  }
+};
+
+export const saveTheme = async (req, res) => {
+  try {
+    const { email, theme } = req.body;
+    if (!email || !theme) {
+      return res.status(400).json({ success: false, error: 'Missing email or theme' });
+    }
+    const user = await User.findOneAndUpdate({ email }, { theme }, { new: true });
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+    res.json({ success: true, theme: user.theme });
+  } catch (error) {
+    console.error('Save theme error:', error);
+    res.status(500).json({ success: false, error: 'Failed to save theme' });
   }
 };

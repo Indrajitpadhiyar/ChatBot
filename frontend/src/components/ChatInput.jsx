@@ -84,10 +84,10 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
   };
 
   return (
-    <div className="relative w-full max-w-3xl mx-auto px-4 pb-6 pt-2">
+    <div className="relative w-full max-w-[var(--chat-max-width)] mx-auto px-4 pb-6 pt-2 transition-all duration-300">
       <form
         onSubmit={handleSubmit}
-        className="relative flex items-end bg-[#111827] border border-[#374151] rounded-3xl p-2 shadow-lg transition-all focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/20"
+        className="relative flex items-end bg-[var(--bg-panel)] border border-[#374151] rounded-3xl p-2 shadow-lg transition-all focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/20"
       >
         <button
           type="button"

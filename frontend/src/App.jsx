@@ -5,6 +5,9 @@ import ChatWindow from './components/ChatWindow';
 import ChatInput from './components/ChatInput';
 import ModelSelector from './components/ModelSelector';
 import Login from './components/Login';
+import SettingsPage from './components/SettingsPage';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle2, X } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -18,6 +21,52 @@ function App() {
   const [chatId, setChatId] = useState(null);        // active session ID
   const [chatHistory, setChatHistory] = useState([]); // sidebar list
   const [aiModel, setAiModel] = useState('idr-ai-v1'); // selected AI model
+  const [currentView, setCurrentView] = useState('chat'); // 'chat' or 'settings'
+  const [notification, setNotification] = useState(null);
+  
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('app_theme');
+    return saved ? JSON.parse(saved) : {
+      bgDark: '#0b0f19',
+      bgPanel: '#111827',
+      bgSidebar: '#0b0f19',
+      chatBubbleAi: '#1f2937',
+      chatBubbleUser: '#3b82f6',
+      textMain: '#f9fafb',
+      fontFamily: 'Inter',
+      fontSize: 15,
+      chatMaxWidth: 56, // 56rem = max-w-4xl roughly
+      isTransparent: false,
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('app_theme', JSON.stringify(theme));
+    const root = document.documentElement;
+    root.style.setProperty('--bg-dark', theme.bgDark);
+    
+    if (theme.isTransparent) {
+        root.style.setProperty('--bg-panel', theme.bgPanel + 'AA');
+        root.style.setProperty('--bg-sidebar', theme.bgSidebar + 'AA');
+    } else {
+        root.style.setProperty('--bg-panel', theme.bgPanel);
+        root.style.setProperty('--bg-sidebar', theme.bgSidebar);
+    }
+    
+    root.style.setProperty('--chat-bubble-ai', theme.chatBubbleAi);
+    root.style.setProperty('--chat-bubble-user', theme.chatBubbleUser);
+    root.style.setProperty('--text-main', theme.textMain);
+    root.style.fontFamily = theme.fontFamily;
+    root.style.fontSize = `${theme.fontSize}px`;
+    root.style.setProperty('--chat-max-width', `${theme.chatMaxWidth}rem`);
+  }, [theme]);
+
+  const playNotificationSound = () => {
+    // A clean, soft notification pop sound
+    const audio = new Audio('https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg');
+    audio.volume = 0.6;
+    audio.play().catch(err => console.log('Audio play blocked:', err));
+  };
 
   useEffect(() => {
     // Restore session
@@ -25,13 +74,52 @@ function App() {
     const storedUser = localStorage.getItem('user');
     if (storedToken && storedUser) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      if (parsedUser.theme && Object.keys(parsedUser.theme).length > 0) {
+        setTheme(parsedUser.theme);
+      }
     }
   }, []);
 
   const handleLoginSuccess = (userData, userToken) => {
     setUser(userData);
     setToken(userToken);
+    if (userData.theme && Object.keys(userData.theme).length > 0) {
+      setTheme(userData.theme);
+    }
+  };
+
+  const saveThemeToDB = async () => {
+    if (!user || !token) return;
+    try {
+      const res = await fetch(`${API_URL}/auth/theme`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ email: user.email, theme })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotification('Custom theme saved to profile!');
+        playNotificationSound();
+        setTimeout(() => setNotification(null), 4000);
+        
+        const updatedUser = { ...user, theme };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      } else {
+        console.error('Backend error:', data.error);
+        setNotification(`Failed: ${data.error || 'Please restart your backend server!'}`);
+        setTimeout(() => setNotification(null), 4000);
+      }
+    } catch (err) {
+      console.error('Save theme error:', err);
+      setNotification('Failed to save theme to profile.');
+      setTimeout(() => setNotification(null), 4000);
+    }
   };
 
   const handleLogout = () => {
@@ -68,6 +156,7 @@ function App() {
   const handleNewChat = () => {
     setMessages([]);
     setChatId(null);
+    setCurrentView('chat');
     if (window.innerWidth < 768) setSidebarOpen(false);
   };
 
@@ -79,6 +168,7 @@ function App() {
       if (data.success) {
         setMessages(data.chat.messages);
         setChatId(id);
+        setCurrentView('chat');
         if (window.innerWidth < 768) setSidebarOpen(false);
       }
     } catch (err) {
@@ -123,6 +213,10 @@ function App() {
           setChatId(data.chatId);
           fetchHistory(); // refresh sidebar
         }
+        const shortTaskName = text.length > 20 ? text.substring(0, 20) + '...' : text;
+        setNotification(`Your task "${shortTaskName}" completed!`);
+        playNotificationSound();
+        setTimeout(() => setNotification(null), 4000);
       } else {
         setMessages((prev) => [
           ...prev,
@@ -145,7 +239,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen bg-[#0b0f19] text-gray-100 overflow-hidden font-sans selection:bg-blue-500/30">
+    <div className="flex h-screen overflow-hidden font-sans selection:bg-blue-500/30 bg-[var(--bg-dark)] text-[var(--text-main)]">
       <Sidebar
         isOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
@@ -154,10 +248,14 @@ function App() {
         onLoadChat={handleLoadChat}
         onDeleteChat={handleDeleteChat}
         activeChatId={chatId}
+        onSettingsClick={() => {
+          setCurrentView('settings');
+          if (window.innerWidth < 768) setSidebarOpen(false);
+        }}
       />
 
-      <div className="flex-1 flex flex-col h-full min-w-0 transition-all duration-300 relative bg-[#111827]">
-        <header className="flex items-center justify-between px-5 h-[60px] border-b border-[#1f2937]/60 shrink-0 bg-[#111827]/80 backdrop-blur-xl z-10 sticky top-0 shadow-sm">
+      <div className="flex-1 flex flex-col h-full min-w-0 transition-all duration-300 relative bg-[var(--bg-panel)]">
+        <header className="flex items-center justify-between px-5 h-[60px] border-b border-[#1f2937]/60 shrink-0 bg-[var(--bg-panel)]/80 backdrop-blur-xl z-10 sticky top-0 shadow-sm">
           <div className="flex items-center space-x-3">
             <button
               onClick={toggleSidebar}
@@ -193,12 +291,38 @@ function App() {
           </div>
         </header>
 
-        <ChatWindow messages={messages} isLoading={isLoading} />
-
-        <div className="shrink-0 bg-gradient-to-t from-[#111827] via-[#111827] to-transparent pt-6">
-          <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
-        </div>
+        {currentView === 'settings' ? (
+          <SettingsPage user={user} theme={theme} setTheme={setTheme} onSaveTheme={saveThemeToDB} />
+        ) : (
+          <>
+            <ChatWindow messages={messages} isLoading={isLoading} />
+            <div className="shrink-0 bg-gradient-to-t from-[var(--bg-panel)] via-[var(--bg-panel)] to-transparent pt-6">
+              <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9, transition: { duration: 0.2 } }}
+            className="fixed top-6 right-6 z-[100] flex items-center bg-[#1f2937]/90 backdrop-blur-md border border-[#374151] shadow-2xl rounded-2xl px-4 py-3 text-white max-w-sm"
+          >
+            <CheckCircle2 size={20} className="text-emerald-400 mr-3 shrink-0" />
+            <span className="text-sm font-medium mr-4 leading-snug">{notification}</span>
+            <button
+              onClick={() => setNotification(null)}
+              className="ml-auto text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-gray-700/50"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

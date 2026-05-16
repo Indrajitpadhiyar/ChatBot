@@ -47,7 +47,7 @@ const ModelSelector = ({ aiModel, setAiModel }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.95 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="absolute right-0 mt-2 w-64 bg-[#111827]/95 backdrop-blur-xl border border-[#374151]/50 rounded-2xl shadow-xl shadow-black/50 overflow-hidden"
+            className="absolute right-0 mt-2 w-64 bg-[var(--bg-panel)] backdrop-blur-xl border border-[#374151]/50 rounded-2xl shadow-xl shadow-black/50 overflow-hidden"
           >
             <div className="p-1.5 space-y-1">
               {models.map((model) => {

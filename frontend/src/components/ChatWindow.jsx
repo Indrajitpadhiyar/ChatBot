@@ -34,7 +34,7 @@ const ChatWindow = ({ messages, isLoading }) => {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col space-y-2 pb-4 px-4 md:px-8 max-w-4xl mx-auto pt-6">
+        <div className="flex flex-col space-y-2 pb-4 px-4 md:px-8 w-full max-w-[var(--chat-max-width)] mx-auto pt-6 transition-all duration-300">
           {messages.map((msg, index) => (
             <ChatMessage key={index} message={msg} />
           ))}

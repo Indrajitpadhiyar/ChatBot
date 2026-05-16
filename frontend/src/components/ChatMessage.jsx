@@ -43,8 +43,8 @@ const ChatMessage = ({ message }) => {
         <div
           className={`relative px-5 py-3.5 text-[15px] leading-relaxed shadow-sm
             ${isAi 
-              ? 'bg-[#1f2937] text-gray-100 rounded-2xl rounded-tl-sm border border-[#374151]' 
-              : 'bg-blue-600 text-white rounded-2xl rounded-tr-sm'
+              ? 'bg-[var(--chat-bubble-ai)] text-gray-100 rounded-2xl rounded-tl-sm border border-[#374151]' 
+              : 'bg-[var(--chat-bubble-user)] text-white rounded-2xl rounded-tr-sm'
             }
           `}
         >
@@ -63,13 +63,13 @@ const ChatMessage = ({ message }) => {
                   strong: ({node, ...props}) => <strong className="font-semibold text-blue-300" {...props}/>,
                   code: ({node, inline, ...props}) => 
                     inline ? (
-                      <code className="bg-[#111827] px-1.5 py-0.5 rounded text-sm text-pink-400" {...props}/>
+                      <code className="bg-[var(--bg-panel)] px-1.5 py-0.5 rounded text-sm text-pink-400" {...props}/>
                     ) : (
-                      <pre className="bg-[#111827] p-3 rounded-lg overflow-x-auto my-3 text-sm text-gray-300 border border-[#374151]">
+                      <pre className="bg-[var(--bg-panel)] p-3 rounded-lg overflow-x-auto my-3 text-sm text-gray-300 border border-[#374151]">
                         <code {...props}/>
                       </pre>
                     ),
-                  blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-blue-500 pl-4 py-1 my-3 bg-[#111827]/50 rounded-r-lg italic text-gray-400" {...props}/>,
+                  blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-blue-500 pl-4 py-1 my-3 bg-[var(--bg-panel)] rounded-r-lg italic text-gray-400" {...props}/>,
                 }}
               >
                 {displayedText}
