@@ -81,19 +81,33 @@ export const login = async (req, res) => {
 
 export const googleLogin = async (req, res, next) => {
   try {
-    const { credential } = req.body;
+    const { credential, access_token } = req.body;
 
-    if (!credential) {
+    let email, name, picture, googleId;
+
+    if (credential) {
+      // Verify ID Token (Standard GoogleLogin component)
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID || 'placeholder',
+      });
+      const payload = ticket.getPayload();
+      googleId = payload.sub;
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+    } else if (access_token) {
+      // Verify Access Token (Custom Button useGoogleLogin flow)
+      const res = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`);
+      const payload = await res.json();
+      if (!payload.email) throw new Error('Invalid access token');
+      googleId = payload.sub;
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+    } else {
       return res.status(400).json({ success: false, error: 'Token missing' });
     }
-
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID || 'placeholder',
-    });
-
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
 
     let user = await User.findOne({ email });
     if (user) {

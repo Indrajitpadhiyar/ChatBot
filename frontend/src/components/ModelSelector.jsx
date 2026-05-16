@@ -4,9 +4,9 @@ import { ChevronDown, Sparkles, Zap, Cpu, BrainCircuit } from 'lucide-react';
 
 const models = [
   { id: 'idr-ai-v1', name: 'IDR AI', icon: BrainCircuit, color: 'text-emerald-400', desc: 'Your custom-trained, advanced AI model' },
+  { id: 'deepseek-chat', name: 'DeepSeek (OpenRouter)', icon: Cpu, color: 'text-blue-400', desc: 'Advanced DeepSeek reasoning model' },
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', icon: Zap, color: 'text-yellow-400', desc: 'Fast & efficient everyday model' },
   { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', icon: Sparkles, color: 'text-purple-400', desc: 'Most capable for complex tasks' },
-  { id: 'gemini-2.0-flash-lite', name: 'Gemini Flash Lite', icon: Cpu, color: 'text-blue-400', desc: 'Lightweight & cost-effective' },
 ];
 
 const ModelSelector = ({ aiModel, setAiModel }) => {

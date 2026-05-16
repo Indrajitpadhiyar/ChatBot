@@ -5,51 +5,93 @@ import { getIsConnected } from '../database/connection.js';
 // Initialize Gemini client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// ─── Centralized Model Configuration ──────────────────────────────────────────
+// Adding a new model in the future is as easy as adding one line here!
+const MODEL_CONFIG = {
+  'gemini-2.5-flash': { provider: 'gemini', actualId: 'gemini-2.5-flash' },
+  'gemini-2.5-pro': { provider: 'gemini', actualId: 'gemini-2.5-pro' },
+  'idr-ai-v1': {
+    provider: 'gemini',
+    actualId: 'gemini-2.5-flash',
+    systemInstruction: {
+      role: 'system',
+      parts: [{ text: "You are IDR AI, an advanced, highly intelligent AI assistant custom-trained and created by Indrajit. You should be helpful, concise, and proudly identify yourself as IDR AI if asked who you are or who made you." }]
+    }
+  },
+  'deepseek-chat': { provider: 'openrouter', actualId: 'deepseek/deepseek-chat' },
+};
+
 // ─── POST /api/chat/send ───────────────────────────────────────────────────────
 export const sendMessage = async (req, res) => {
   const { message, chatId, aiModel } = req.body;
-
-  // Handle custom IDR AI mapping 
-  let selectedModel = aiModel || 'gemini-2.5-flash';
-  let systemInstruction = undefined;
-
-  if (selectedModel === 'idr-ai-v1') {
-    selectedModel = 'gemini-2.5-flash';
-    systemInstruction = {
-      role: 'system',
-      parts: [{ text: "You are IDR AI, an advanced, highly intelligent AI assistant custom-trained and created by Indrajit. You should be helpful, concise, and proudly identify yourself as IDR AI if asked who you are or who made you." }]
-    };
-  }
 
   if (!message || !message.trim()) {
     return res.status(400).json({ success: false, error: 'Message is required.' });
   }
 
+  // Lookup model config, fallback to gemini-2.5-flash if not found
+  const modelDef = MODEL_CONFIG[aiModel] || MODEL_CONFIG['gemini-2.5-flash'];
+
   try {
     const dbAvailable = getIsConnected();
-    let history = [];
+    let historyGemini = [];
+    let historyOpenAI = [];
     let chatSession = null;
 
-    // Build Gemini history from DB if continuing a session
+    // Build history from DB if continuing a session
     if (dbAvailable && chatId) {
       chatSession = await Chat.findById(chatId);
       if (chatSession) {
-        history = chatSession.messages.map((m) => ({
+        historyGemini = chatSession.messages.map((m) => ({
           role: m.role === 'ai' ? 'model' : 'user',
           parts: [{ text: m.content }],
+        }));
+        historyOpenAI = chatSession.messages.map((m) => ({
+          role: m.role === 'ai' ? 'assistant' : 'user',
+          content: m.content,
         }));
       }
     }
 
-    // ── Call Gemini API with selected model and optional system instruction ──
-    const modelOptions = { model: selectedModel };
-    if (systemInstruction) {
-      modelOptions.systemInstruction = systemInstruction;
+    let aiText = '';
+
+    // ── Route request based on provider ──
+    if (modelDef.provider === 'openrouter' || modelDef.provider === 'openai') {
+      const apiKey = modelDef.provider === 'openrouter' ? process.env.DEEPSEEK_API_KEY : process.env.OPENAI_API_KEY;
+      const apiUrl = modelDef.provider === 'openrouter' ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
+
+      const apiRes = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: modelDef.actualId,
+          messages: [
+            ...historyOpenAI,
+            { role: "user", content: message.trim() }
+          ]
+        })
+      });
+      const data = await apiRes.json();
+
+      if (data.choices && data.choices.length > 0) {
+        aiText = data.choices[0].message.content;
+      } else {
+        throw new Error(`${modelDef.provider} API failed: ` + JSON.stringify(data));
+      }
     }
-    const model = genAI.getGenerativeModel(modelOptions);
-    const chat = model.startChat({ history });
-    const result = await chat.sendMessage(message.trim());
-    const aiText = result.response.text();
+    else if (modelDef.provider === 'gemini') {
+      const modelOptions = { model: modelDef.actualId };
+      if (modelDef.systemInstruction) {
+        modelOptions.systemInstruction = modelDef.systemInstruction;
+      }
+      const model = genAI.getGenerativeModel(modelOptions);
+      const chat = model.startChat({ history: historyGemini });
+      const result = await chat.sendMessage(message.trim());
+      aiText = result.response.text();
+    }
 
     // ── Persist to MongoDB (only when DB is available) ───────────────────────
     let returnedChatId = chatId || null;

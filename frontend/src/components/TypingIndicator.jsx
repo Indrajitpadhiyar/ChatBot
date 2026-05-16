@@ -1,35 +1,169 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
 
-const TypingIndicator = () => {
+// ─────────────────────────────────────────────
+// StarburstLogo
+// Recreates the golden radial logo as inline SVG
+// so no external image file is needed.
+// ─────────────────────────────────────────────
+const StarburstLogo = ({ size = 20 }) => {
+  const spokes = 12;
+  const cx = 50, cy = 50;
+  const innerR = 18, outerR = 42; // spoke start / end radius
+  const dotR = 5, dotDist = 48; // end-cap dot size / distance
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex w-full mb-6 justify-start"
-    >
-      <div className="flex flex-row max-w-[85%] md:max-w-[75%]">
-        <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 mr-3 shadow-md">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" /></svg>
-        </div>
-        <div className="flex space-x-1.5 px-5 py-4 bg-[#1f2937] rounded-2xl rounded-tl-sm border border-[#374151] shadow-sm items-center h-[46px]">
-          {[0, 1, 2].map((dot) => (
-            <motion.div
-              key={dot}
-              className="w-2 h-2 bg-gray-400 rounded-full"
-              animate={{ y: [0, -5, 0] }}
-              transition={{
-                duration: 0.6,
-                repeat: Infinity,
-                delay: dot * 0.2,
-                ease: "easeInOut",
-              }}
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+      {Array.from({ length: spokes }).map((_, i) => {
+        const angle = (i * 360) / spokes - 90; // start from top
+        const rad = (angle * Math.PI) / 180;
+        return (
+          <g key={i}>
+            {/* Radial spoke line */}
+            <line
+              x1={cx + innerR * Math.cos(rad)}
+              y1={cy + innerR * Math.sin(rad)}
+              x2={cx + outerR * Math.cos(rad)}
+              y2={cy + outerR * Math.sin(rad)}
+              stroke="#C9922A"
+              strokeWidth="5"
+              strokeLinecap="round"
             />
-          ))}
-        </div>
-      </div>
-    </motion.div>
+            {/* Dot at the tip of each spoke */}
+            <circle
+              cx={cx + dotDist * Math.cos(rad)}
+              cy={cy + dotDist * Math.sin(rad)}
+              r={dotR}
+              fill="#C9922A"
+            />
+          </g>
+        );
+      })}
+    </svg>
   );
 };
 
-export default TypingIndicator;
+// ─────────────────────────────────────────────
+// DotsRow
+// Three dots that bounce up/down one after another
+// mimicking Claude's native typing indicator rhythm.
+// ─────────────────────────────────────────────
+const DotsRow = () => (
+  <span className="flex items-center gap-[3px]">
+    {[0, 1, 2].map((i) => (
+      <motion.span
+        key={i}
+        style={{
+          display: "inline-block",
+          width: 3.5,
+          height: 3.5,
+          borderRadius: "50%",
+          background: "#C9922A",
+        }}
+        animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
+        transition={{
+          duration: 1.1,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: i * 0.18, // stagger each dot
+        }}
+      />
+    ))}
+  </span>
+);
+
+// ─────────────────────────────────────────────
+// TypingIndicator  ← the component you embed
+//
+// Drop this wherever the AI response would appear
+// in your chat list, e.g.:
+//
+//   {isThinking && <TypingIndicator />}
+//
+// It has NO wrapper that fills the screen —
+// it only takes the space it needs.
+// ─────────────────────────────────────────────
+const TypingIndicator = () => (
+  // Align to the left, same as AI message bubbles in your UI
+  <div className="flex items-center">
+
+    {/* Pill bubble — fades + scales in when mounted */}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, y: 4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9, y: 4 }}
+      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+      className="relative inline-flex items-center gap-2"
+      style={{
+        padding: "9px 14px",
+        borderRadius: 999,
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(201,146,42,0.2)",
+        boxShadow: "0 0 20px rgba(201,146,42,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",
+        backdropFilter: "blur(12px)",
+      }}
+    >
+      {/* Soft radial glow sitting behind the logo */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          left: 8,
+          top: "50%",
+          transform: "translateY(-50%)",
+          width: 26,
+          height: 26,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(201,146,42,0.3) 0%, transparent 70%)",
+          filter: "blur(6px)",
+        }}
+      />
+
+      {/* Logo rocks gently left → right → left */}
+      <motion.div
+        animate={{ rotate: [0, 30, 0] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        className="relative z-10 flex"
+      >
+        <StarburstLogo size={20} />
+      </motion.div>
+
+      {/* Bouncing dots */}
+      <div className="relative z-10">
+        <DotsRow />
+      </div>
+    </motion.div>
+
+  </div>
+);
+
+// ─────────────────────────────────────────────
+// Preview wrapper (remove this in production)
+// Shows the indicator inside a mock chat layout
+// so you can see how it looks in context.
+// ─────────────────────────────────────────────
+const Preview = () => (
+  <div
+    className="flex flex-col gap-3 p-6"
+    style={{ background: "#111318", minHeight: "100vh" }}
+  >
+    {/* Simulated AI message bubble */}
+    <div
+      className="self-start max-w-xs px-4 py-3 rounded-2xl text-sm text-gray-200"
+      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+    >
+      Hello! How can I help you today?
+    </div>
+
+    {/* Simulated user bubble */}
+    <div
+      className="self-end px-4 py-2 rounded-2xl text-sm text-white"
+      style={{ background: "#22c55e" }}
+    >
+      heey
+    </div>
+
+    {/* ← The typing indicator lives right here in the flow */}
+    <TypingIndicator />
+  </div>
+);
+
+export default Preview;

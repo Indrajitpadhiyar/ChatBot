@@ -264,6 +264,7 @@ function App() {
             >
               <PanelLeft size={22} />
             </button>
+            <img src="/images/logo.png" alt="Logo" className="w-8 h-8 object-contain rounded-lg" />
             <h1 className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-500 tracking-wide text-lg">IDR AI</h1>
           </div>
           <div className="flex items-center space-x-3">
