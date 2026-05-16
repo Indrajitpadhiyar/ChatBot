@@ -15,21 +15,26 @@ const MODEL_CONFIG = {
     actualId: 'gemini-2.5-flash',
     systemInstruction: {
       role: 'system',
-      parts: [{ text: "You are IDR AI, an advanced, highly intelligent AI assistant custom-trained and created by Indrajit. You should be helpful, concise, and proudly identify yourself as IDR AI if asked who you are or who made you." }]
+      parts: [{ text: "You are IDR AI, an advanced, highly intelligent AI assistant custom-trained and created by IDR Tech. You should be helpful, concise, and proudly identify yourself as IDR AI if asked who you are or who made you." }]
     }
   },
+  'gpt-4o': { provider: 'openrouter', actualId: 'openai/gpt-4o' },
   'deepseek-chat': { provider: 'openrouter', actualId: 'deepseek/deepseek-chat' },
 };
 
 // ─── POST /api/chat/send ───────────────────────────────────────────────────────
 export const sendMessage = async (req, res) => {
-  const { message, chatId, aiModel } = req.body;
+  const { message, chatId, aiModel, projectId, editIndex } = req.body;
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ success: false, error: 'User session expired. Please re-login.' });
+  }
 
   if (!message || !message.trim()) {
     return res.status(400).json({ success: false, error: 'Message is required.' });
   }
 
-  // Lookup model config, fallback to gemini-2.5-flash if not found
   const modelDef = MODEL_CONFIG[aiModel] || MODEL_CONFIG['gemini-2.5-flash'];
 
   try {
@@ -38,10 +43,15 @@ export const sendMessage = async (req, res) => {
     let historyOpenAI = [];
     let chatSession = null;
 
-    // Build history from DB if continuing a session
     if (dbAvailable && chatId) {
-      chatSession = await Chat.findById(chatId);
+      chatSession = await Chat.findOne({ _id: chatId, userId });
       if (chatSession) {
+        // Handle Edit: Truncate history if editIndex is provided
+        if (typeof editIndex === 'number' && editIndex >= 0 && editIndex < chatSession.messages.length) {
+          chatSession.messages = chatSession.messages.slice(0, editIndex);
+          // The new message will be pushed later in the normal flow
+        }
+
         historyGemini = chatSession.messages.map((m) => ({
           role: m.role === 'ai' ? 'model' : 'user',
           parts: [{ text: m.content }],
@@ -55,7 +65,7 @@ export const sendMessage = async (req, res) => {
 
     let aiText = '';
 
-    // ── Route request based on provider ──
+    // AI Generation (same as before)
     if (modelDef.provider === 'openrouter' || modelDef.provider === 'openai') {
       const apiKey = modelDef.provider === 'openrouter' ? process.env.DEEPSEEK_API_KEY : process.env.OPENAI_API_KEY;
       const apiUrl = modelDef.provider === 'openrouter' ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
@@ -64,18 +74,20 @@ export const sendMessage = async (req, res) => {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "HTTP-Referer": "http://localhost:5173",
+          "X-Title": "IDR AI Chatbot"
         },
         body: JSON.stringify({
           model: modelDef.actualId,
           messages: [
             ...historyOpenAI,
             { role: "user", content: message.trim() }
-          ]
+          ],
+          max_tokens: 1000
         })
       });
       const data = await apiRes.json();
-
       if (data.choices && data.choices.length > 0) {
         aiText = data.choices[0].message.content;
       } else {
@@ -93,7 +105,6 @@ export const sendMessage = async (req, res) => {
       aiText = result.response.text();
     }
 
-    // ── Persist to MongoDB (only when DB is available) ───────────────────────
     let returnedChatId = chatId || null;
 
     if (dbAvailable) {
@@ -103,6 +114,8 @@ export const sendMessage = async (req, res) => {
         await chatSession.save();
       } else {
         const newSession = await Chat.create({
+          userId,
+          projectId: projectId || null,
           messages: [
             { role: 'user', content: message.trim() },
             { role: 'ai', content: aiText },
@@ -133,7 +146,11 @@ export const getAllChats = async (req, res) => {
     return res.status(200).json({ success: true, chats: [], dbAvailable: false });
   }
   try {
-    const chats = await Chat.find({}, 'title createdAt').sort({ createdAt: -1 });
+    const { projectId } = req.query;
+    const filter = { userId: req.user.userId };
+    if (projectId) filter.projectId = projectId;
+
+    const chats = await Chat.find(filter, 'title createdAt projectId').sort({ createdAt: -1 });
     res.status(200).json({ success: true, chats, dbAvailable: true });
   } catch (error) {
     console.error('❌ DB Error in getAllChats:', error.message);
@@ -147,7 +164,7 @@ export const getChatById = async (req, res) => {
     return res.status(503).json({ success: false, error: 'Database unavailable.' });
   }
   try {
-    const chat = await Chat.findById(req.params.id);
+    const chat = await Chat.findOne({ _id: req.params.id, userId: req.user.userId });
     if (!chat) return res.status(404).json({ success: false, error: 'Chat not found.' });
     res.status(200).json({ success: true, chat });
   } catch (error) {
@@ -162,7 +179,8 @@ export const deleteChat = async (req, res) => {
     return res.status(503).json({ success: false, error: 'Database unavailable.' });
   }
   try {
-    await Chat.findByIdAndDelete(req.params.id);
+    const chat = await Chat.findOneAndDelete({ _id: req.params.id, userId: req.user.userId });
+    if (!chat) return res.status(404).json({ success: false, error: 'Chat not found or unauthorized.' });
     res.status(200).json({ success: true, message: 'Chat deleted successfully.' });
   } catch (error) {
     console.error('❌ DB Error in deleteChat:', error.message);

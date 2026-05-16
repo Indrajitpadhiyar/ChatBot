@@ -3,7 +3,7 @@ import ChatMessage from './ChatMessage';
 import TypingIndicator from './TypingIndicator';
 import { motion } from 'framer-motion';
 
-const ChatWindow = ({ messages, isLoading }) => {
+const ChatWindow = ({ messages, isLoading, onEdit }) => {
   const endOfMessagesRef = useRef(null);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ const ChatWindow = ({ messages, isLoading }) => {
       ) : (
         <div className="flex flex-col space-y-2 pb-4 px-4 md:px-8 w-full max-w-[var(--chat-max-width)] mx-auto pt-6 transition-all duration-300">
           {messages.map((msg, index) => (
-            <ChatMessage key={index} message={msg} />
+            <ChatMessage key={index} message={msg} index={index} onEdit={onEdit} />
           ))}
           {isLoading && <TypingIndicator />}
           <div ref={endOfMessagesRef} className="h-2" />

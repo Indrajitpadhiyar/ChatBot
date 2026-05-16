@@ -5,19 +5,20 @@ import {
   getChatById,
   deleteChat,
 } from '../controller/chat.controller.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // POST   /api/chat/send        → Send message & get AI reply
-router.post('/send', sendMessage);
+router.post('/send', protect, sendMessage);
 
 // GET    /api/chat/history     → All sessions list (for sidebar)
-router.get('/history', getAllChats);
+router.get('/history', protect, getAllChats);
 
 // GET    /api/chat/:id         → Full message thread of a session
-router.get('/:id', getChatById);
+router.get('/:id', protect, getChatById);
 
 // DELETE /api/chat/:id         → Delete a session
-router.delete('/:id', deleteChat);
+router.delete('/:id', protect, deleteChat);
 
 export default router;

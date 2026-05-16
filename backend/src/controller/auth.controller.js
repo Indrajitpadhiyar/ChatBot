@@ -7,7 +7,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'placeholder');
 
 const generateToken = (user) => {
   return jwt.sign(
-    { userId: user._id, email: user.email },
+    { userId: user._id.toString(), email: user.email },
     process.env.JWT_SECRET || 'my_super_secret_jwt_key_idr_ai',
     { expiresIn: '7d' }
   );

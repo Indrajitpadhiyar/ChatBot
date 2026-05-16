@@ -24,6 +24,16 @@ const chatSchema = new mongoose.Schema(
       type: String,
       default: 'New Chat',
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Project',
+      default: null,
+    },
     messages: [messageSchema],
   },
   { timestamps: true }

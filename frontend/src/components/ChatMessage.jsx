@@ -4,7 +4,7 @@ import { User, Bot, Copy, Check, Edit2, CheckCircle2, X, Sparkles } from 'lucide
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const ChatMessage = ({ message }) => {
+const ChatMessage = ({ message, index, onEdit }) => {
   const isAi = message.role === 'ai';
   
   const [editedContent, setEditedContent] = useState(message.content);
@@ -13,6 +13,11 @@ const ChatMessage = ({ message }) => {
   const [isCopied, setIsCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [tempText, setTempText] = useState(editedContent);
+
+  useEffect(() => {
+    setEditedContent(message.content);
+    setTempText(message.content);
+  }, [message.content]);
 
   useEffect(() => {
     if (isAi && message.isNew) {
@@ -38,9 +43,16 @@ const ChatMessage = ({ message }) => {
   };
 
   const handleSaveEdit = () => {
-    setEditedContent(tempText);
-    message.content = tempText; 
-    setIsEditing(false);
+    if (!isAi && onEdit) {
+      // For User messages: Trigger regeneration
+      onEdit(tempText, index);
+      setIsEditing(false);
+    } else {
+      // For AI messages: Local only update
+      setEditedContent(tempText);
+      message.content = tempText; 
+      setIsEditing(false);
+    }
   };
 
   return (
@@ -63,27 +75,31 @@ const ChatMessage = ({ message }) => {
               `}
             >
               {isAi ? (
-                <div className="w-full break-words leading-relaxed">
+                <div className="w-full break-words leading-relaxed text-[var(--text-main)]/90">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-4 mb-2" {...props} />,
-                      h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-4 mb-2" {...props} />,
-                      h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-3 mb-2" {...props} />,
-                      p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-                      ul: ({ node, ...props }) => <ul className="list-disc list-outside ml-5 mb-3 space-y-1" {...props} />,
-                      ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-5 mb-3 space-y-1" {...props} />,
-                      li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                      strong: ({ node, ...props }) => <strong className="font-semibold text-blue-300" {...props} />,
+                      h1: ({ node, ...props }) => <h1 className="text-2xl font-extrabold mt-8 mb-4 text-[var(--text-main)] tracking-tight" {...props} />,
+                      h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-6 mb-3 text-[var(--text-main)] tracking-tight" {...props} />,
+                      h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-5 mb-2 text-[var(--text-main)]" {...props} />,
+                      p: ({ node, ...props }) => <p className="mb-4 last:mb-0 leading-[1.7]" {...props} />,
+                      ul: ({ node, ...props }) => <ul className="list-disc list-outside ml-6 mb-4 space-y-2 text-[var(--text-main)]/80" {...props} />,
+                      ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-6 mb-4 space-y-2 text-[var(--text-main)]/80" {...props} />,
+                      li: ({ node, ...props }) => <li className="pl-2" {...props} />,
+                      strong: ({ node, ...props }) => <strong className="font-bold text-[var(--text-main)]" {...props} />,
                       code: ({ node, inline, ...props }) =>
                         inline ? (
-                          <code className="bg-[var(--bg-panel)] px-1.5 py-0.5 rounded text-sm text-pink-400" {...props} />
+                          <code className="bg-[var(--bg-panel)] px-1.5 py-0.5 rounded-md text-sm text-pink-500 font-mono" {...props} />
                         ) : (
-                          <pre className="bg-[var(--bg-panel)] p-3 rounded-lg overflow-x-auto my-3 text-sm text-gray-300 border border-[#374151]">
-                            <code {...props} />
-                          </pre>
+                          <div className="relative my-6 group/code">
+                            <div className="absolute -top-3 right-4 px-2 py-1 bg-gray-800 text-[10px] font-bold text-gray-400 rounded-md border border-gray-700 uppercase tracking-widest opacity-0 group-hover/code:opacity-100 transition-opacity">Code</div>
+                            <pre className="bg-[#0b0f19] p-5 rounded-2xl overflow-x-auto text-sm text-gray-300 border border-gray-800/50 shadow-inner custom-scrollbar">
+                              <code {...props} className="font-mono" />
+                            </pre>
+                          </div>
                         ),
-                      blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 py-1 my-3 bg-[var(--bg-panel)] rounded-r-lg italic text-gray-400" {...props} />,
+                      blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-500/50 pl-6 py-2 my-5 bg-blue-500/5 rounded-r-2xl italic text-gray-400 leading-relaxed" {...props} />,
+                      hr: ({ node, ...props }) => <hr className="my-8 border-gray-800/50" {...props} />,
                     }}
                   >
                     {displayedText}
@@ -94,22 +110,22 @@ const ChatMessage = ({ message }) => {
               )}
             </div>
 
-            {/* AI Action Bar */}
-            {isAi && !isEditing && !message.isNew && (
-              <div className="flex items-center space-x-3 mt-2 ml-1 opacity-40 group-hover:opacity-100 transition-opacity duration-200">
+            {/* Action Bar (Show for both AI and User) */}
+            {!isEditing && !message.isNew && (
+              <div className={`flex items-center space-x-3 mt-2 ${isAi ? 'ml-1' : 'mr-1 flex-row-reverse space-x-reverse'} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
                 <button 
                   onClick={handleCopy} 
-                  className="text-gray-400 hover:text-white transition-colors flex items-center space-x-1.5 text-[11px] font-medium bg-[#1f2937]/50 hover:bg-[#374151] px-2 py-1 rounded-md"
+                  className="text-gray-400 hover:text-white transition-colors flex items-center space-x-1.5 text-[10px] font-bold bg-[#1f2937]/40 hover:bg-[#374151] px-2.5 py-1.5 rounded-lg border border-gray-800/40"
                 >
-                  {isCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                  <span>{isCopied ? 'Copied' : 'Copy'}</span>
+                  {isCopied ? <CheckCircle2 size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                  <span>{isCopied ? 'COPIED' : 'COPY'}</span>
                 </button>
                 <button 
                   onClick={() => setIsEditing(true)} 
-                  className="text-gray-400 hover:text-white transition-colors flex items-center space-x-1.5 text-[11px] font-medium bg-[#1f2937]/50 hover:bg-[#374151] px-2 py-1 rounded-md"
+                  className="text-gray-400 hover:text-white transition-colors flex items-center space-x-1.5 text-[10px] font-bold bg-[#1f2937]/40 hover:bg-[#374151] px-2.5 py-1.5 rounded-lg border border-gray-800/40"
                 >
                   <Edit2 size={12} />
-                  <span>Edit</span>
+                  <span>EDIT</span>
                 </button>
               </div>
             )}

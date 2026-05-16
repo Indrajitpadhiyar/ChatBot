@@ -11,14 +11,19 @@
   --text-muted: #9ca3af;
   --accent: #3b82f6;
   --accent-hover: #2563eb;
+  --bg-image: none;
 }
 
 body {
   background-color: var(--bg-dark);
   background-image: 
+    var(--bg-image),
     radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
     radial-gradient(at 50% 0%, hsla(225,39%,30%,0.1) 0, transparent 50%), 
     radial-gradient(at 100% 0%, hsla(339,49%,30%,0.1) 0, transparent 50%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   background-attachment: fixed;
   color: var(--text-main);
   font-family: 'Inter', sans-serif;

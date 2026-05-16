@@ -2,16 +2,19 @@ import express from 'express';
 import cors from 'cors';
 import chatRoutes from './Routes/chat.routes.js';
 import authRoutes from './Routes/auth.routes.js';
+import projectRoutes from './Routes/project.routes.js';
 
 const app = express();
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
+app.use('/public', express.static('public'));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/projects', projectRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
