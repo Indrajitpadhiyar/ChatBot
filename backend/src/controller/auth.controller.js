@@ -37,7 +37,7 @@ export const register = async (req, res) => {
     res.status(201).json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, picture: user.picture, theme: user.theme }
+      user: { id: user._id, name: user.name, email: user.email, picture: user.picture, theme: user.theme, plan: user.plan }
     });
   } catch (error) {
     console.error('Register error:', error);
@@ -71,7 +71,7 @@ export const login = async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, picture: user.picture, theme: user.theme }
+      user: { id: user._id, name: user.name, email: user.email, picture: user.picture, theme: user.theme, plan: user.plan }
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -130,7 +130,8 @@ export const googleLogin = async (req, res, next) => {
         name: user.name,
         email: user.email,
         picture: user.picture,
-        theme: user.theme
+        theme: user.theme,
+        plan: user.plan
       }
     });
   } catch (error) {

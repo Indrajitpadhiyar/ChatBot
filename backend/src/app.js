@@ -3,6 +3,7 @@ import cors from 'cors';
 import chatRoutes from './Routes/chat.routes.js';
 import authRoutes from './Routes/auth.routes.js';
 import projectRoutes from './Routes/project.routes.js';
+import paymentRoutes from './Routes/payment.routes.js';
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use('/public', express.static('public'));
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {

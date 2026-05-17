@@ -384,7 +384,19 @@ function App() {
         {currentView === 'settings' ? (
           <SettingsPage user={user} theme={theme} setTheme={setTheme} onSaveTheme={saveThemeToDB} />
         ) : currentView === 'pricing' ? (
-          <PricingPage onBack={() => setCurrentView('chat')} />
+          <PricingPage 
+            user={user} 
+            token={token} 
+            onBack={() => setCurrentView('chat')} 
+            onUpgradeSuccess={(updatedUser) => {
+              setUser(updatedUser);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+              setNotification(`Welcome to ${updatedUser.plan.toUpperCase()}! Your account has been upgraded.`);
+              playNotificationSound();
+              setTimeout(() => setNotification(null), 5000);
+              setCurrentView('chat');
+            }}
+          />
         ) : (
           <>
             <ChatWindow messages={messages} isLoading={isLoading} onEdit={handleSendMessage} />

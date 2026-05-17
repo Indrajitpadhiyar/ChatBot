@@ -1,8 +1,111 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Sparkles, Zap, Shield, Crown, ArrowRight } from 'lucide-react';
+import { Check, Sparkles, Zap, Shield, Crown, ArrowRight, Loader2 } from 'lucide-react';
 
-const PricingPage = ({ onBack }) => {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const PricingPage = ({ user, token, onBack, onUpgradeSuccess }) => {
+  const [loadingPlan, setLoadingPlan] = useState(null);
+
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleUpgrade = async (plan) => {
+    if (plan.isCurrent || plan.name === 'Enterprise') return; // Enterprise is contact sales
+    
+    setLoadingPlan(plan.name);
+    
+    const res = await loadRazorpay();
+    if (!res) {
+      alert('Razorpay SDK failed to load. Are you online?');
+      setLoadingPlan(null);
+      return;
+    }
+
+    try {
+      // 1. Create order on backend
+      const orderRes = await fetch(`${API_URL}/payments/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          amount: parseInt(plan.price),
+          planName: plan.name
+        })
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderData.success) {
+        throw new Error(orderData.error || 'Failed to create order');
+      }
+
+      const { order } = orderData;
+
+      // 2. Open Razorpay Checkout
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'IDR AI',
+        description: `Upgrade to ${plan.name} Plan`,
+        image: '/images/logo.png',
+        order_id: order.id,
+        handler: async (response) => {
+          try {
+            // 3. Verify payment on backend
+            const verifyRes = await fetch(`${API_URL}/payments/verify-payment`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                planName: plan.name
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              onUpgradeSuccess(verifyData.user);
+            } else {
+              alert('Payment verification failed: ' + verifyData.error);
+            }
+          } catch (err) {
+            console.error('Verification error:', err);
+            alert('Something went wrong during verification.');
+          }
+        },
+        prefill: {
+          name: user?.name,
+          email: user?.email,
+        },
+        theme: {
+          color: '#3b82f6',
+        },
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+    } catch (err) {
+      console.error('Payment error:', err);
+      alert(err.message || 'Payment initiation failed');
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+
   const plans = [
     {
       name: "Free",
@@ -12,7 +115,7 @@ const PricingPage = ({ onBack }) => {
       color: "from-gray-500 to-gray-700",
       icon: <Zap size={24} className="text-gray-400" />,
       buttonText: "Current Plan",
-      isCurrent: true
+      isCurrent: (user?.plan || 'free') === 'free'
     },
     {
       name: "Pro",
@@ -27,8 +130,9 @@ const PricingPage = ({ onBack }) => {
       ],
       color: "from-blue-500 to-indigo-600",
       icon: <Crown size={24} className="text-blue-400" />,
-      buttonText: "Upgrade to Pro",
-      popular: true
+      buttonText: (user?.plan === 'pro') ? "Current Plan" : "Upgrade to Pro",
+      popular: true,
+      isCurrent: user?.plan === 'pro'
     },
     {
       name: "Enterprise",
@@ -43,7 +147,8 @@ const PricingPage = ({ onBack }) => {
       ],
       color: "from-emerald-500 to-teal-600",
       icon: <Shield size={24} className="text-emerald-400" />,
-      buttonText: "Contact Sales"
+      buttonText: (user?.plan === 'enterprise') ? "Current Plan" : "Contact Sales",
+      isCurrent: user?.plan === 'enterprise'
     }
   ];
 
@@ -119,6 +224,8 @@ const PricingPage = ({ onBack }) => {
               </div>
 
               <button 
+                onClick={() => handleUpgrade(plan)}
+                disabled={plan.isCurrent || loadingPlan}
                 className={`w-full py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center group ${
                   plan.isCurrent 
                     ? 'bg-gray-800 text-gray-400 cursor-not-allowed border border-gray-700' 
@@ -127,8 +234,14 @@ const PricingPage = ({ onBack }) => {
                       : 'bg-white hover:bg-gray-100 text-black'
                 }`}
               >
-                <span>{plan.buttonText}</span>
-                {!plan.isCurrent && <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />}
+                {loadingPlan === plan.name ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <>
+                    <span>{plan.buttonText}</span>
+                    {!plan.isCurrent && plan.name !== 'Enterprise' && <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />}
+                  </>
+                )}
               </button>
             </motion.div>
           ))}
@@ -148,3 +261,4 @@ const PricingPage = ({ onBack }) => {
 };
 
 export default PricingPage;
+

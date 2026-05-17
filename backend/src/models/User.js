@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true },
     picture: { type: String },
     theme: { type: Object, default: {} },
+    plan: { type: String, default: 'free', enum: ['free', 'pro', 'enterprise'] },
   },
   { timestamps: true }
 );
