@@ -4,6 +4,7 @@ import {
   getAllChats,
   getChatById,
   deleteChat,
+  updateChat,
 } from '../controller/chat.controller.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -20,5 +21,8 @@ router.get('/:id', protect, getChatById);
 
 // DELETE /api/chat/:id         → Delete a session
 router.delete('/:id', protect, deleteChat);
+
+// PUT    /api/chat/:id         → Update chat details (title, isPinned, isArchived, projectId)
+router.put('/:id', protect, updateChat);
 
 export default router;

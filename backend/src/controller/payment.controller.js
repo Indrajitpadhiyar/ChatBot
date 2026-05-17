@@ -19,7 +19,7 @@ export const createOrder = async (req, res) => {
     }
 
     const options = {
-      amount: amount * 100, // amount in the smallest currency unit (paise)
+      amount: amount * 100,
       currency: 'INR',
       receipt: `receipt_${Date.now()}`,
       notes: {

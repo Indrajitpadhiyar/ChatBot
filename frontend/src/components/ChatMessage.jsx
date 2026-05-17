@@ -76,6 +76,29 @@ const ChatMessage = ({ message, index, onEdit }) => {
             >
               {isAi ? (
                 <div className="w-full break-words leading-relaxed text-[var(--text-main)]/90">
+                  {message.model && (
+                    <div className="inline-flex items-center space-x-1 mb-2">
+                      <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md tracking-wider uppercase border
+                        ${message.model === 'gpt-4o' 
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                          : message.model === 'deepseek-chat'
+                          ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                          : message.model === 'gemini-2.5-pro'
+                          ? 'bg-violet-500/20 text-violet-400 border-violet-500/30'
+                          : message.model === 'idr-ai-v1'
+                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                          : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                        }`}
+                      >
+                        {message.model === 'gpt-4o' ? '🤖 GPT-4o' :
+                         message.model === 'deepseek-chat' ? '⚡ DeepSeek V3' :
+                         message.model === 'gemini-2.5-pro' ? '🔮 Gemini 2.5 Pro' :
+                         message.model === 'idr-ai-v1' ? '✨ IDR AI' :
+                         message.model === 'gemini-2.5-flash' ? '💨 Gemini 2.5 Flash' :
+                         message.model}
+                      </span>
+                    </div>
+                  )}
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{

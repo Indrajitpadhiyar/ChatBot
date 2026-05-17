@@ -8,7 +8,7 @@ import Login from './components/Login';
 import SettingsPage from './components/SettingsPage';
 import PricingPage from './components/PricingPage';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, X } from 'lucide-react';
+import { CheckCircle2, X, BrainCircuit } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -26,6 +26,8 @@ function App() {
   const [aiModel, setAiModel] = useState('idr-ai-v1'); 
   const [currentView, setCurrentView] = useState('chat'); 
   const [notification, setNotification] = useState(null);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [selectedGroupModels, setSelectedGroupModels] = useState(['idr-ai-v1', 'gpt-4o']);
   
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('app_theme');
@@ -256,6 +258,40 @@ function App() {
     }
   };
 
+  const handleUpdateChat = async (id, fields) => {
+    try {
+      const res = await fetch(`${API_URL}/chat/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(fields)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setChatHistory((prev) => 
+          prev.map((chat) => (chat._id === id ? { ...chat, ...fields } : chat))
+        );
+        fetchProjects(); // Refresh counts in projects
+        if (fields.title) {
+          setNotification('Chat renamed!');
+        } else if (fields.isPinned !== undefined) {
+          setNotification(fields.isPinned ? 'Chat pinned to top!' : 'Chat unpinned!');
+        } else if (fields.isArchived !== undefined) {
+          setNotification(fields.isArchived ? 'Chat archived!' : 'Chat restored!');
+        } else if (fields.projectId !== undefined) {
+          const targetProj = projects.find(p => p._id === fields.projectId);
+          setNotification(targetProj ? `Chat moved to ${targetProj.name}!` : 'Chat moved to All Chats!');
+        }
+        playNotificationSound();
+        setTimeout(() => setNotification(null), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to update chat:', err);
+    }
+  };
+
   const handleSendMessage = async (text, editIndex = null) => {
     // If it's an edit, truncate the local messages array first
     if (editIndex !== null) {
@@ -291,8 +327,13 @@ function App() {
       const data = await res.json();
 
       if (data.success) {
-        const aiMsg = { role: 'ai', content: data.reply, isNew: true };
-        setMessages((prev) => [...prev, aiMsg]);
+        if (data.replies && data.replies.length > 0) {
+          const aiMsgs = data.replies.map(r => ({ role: 'ai', content: r.reply, model: r.model, isNew: true }));
+          setMessages((prev) => [...prev, ...aiMsgs]);
+        } else {
+          const aiMsg = { role: 'ai', content: data.reply, model: data.model, isNew: true };
+          setMessages((prev) => [...prev, aiMsg]);
+        }
         if (!chatId) {
           setChatId(data.chatId);
           fetchHistory();
@@ -337,6 +378,13 @@ function App() {
         onDeleteProject={handleDeleteProject}
         onLoadChat={handleLoadChat}
         onDeleteChat={handleDeleteChat}
+        onUpdateChat={handleUpdateChat}
+        onStartGroupChat={() => setIsGroupModalOpen(true)}
+        onShareSuccess={(msg) => {
+          setNotification(msg);
+          playNotificationSound();
+          setTimeout(() => setNotification(null), 4000);
+        }}
         activeChatId={chatId}
         onSettingsClick={() => {
           setCurrentView('settings');
@@ -421,6 +469,111 @@ function App() {
               <X size={16} />
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* GROUP CHAT SWARM MODAL */}
+      <AnimatePresence>
+        {isGroupModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/85 backdrop-blur-md"
+              onClick={() => setIsGroupModalOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-[#111827] border border-gray-800 p-8 rounded-[2rem] shadow-2xl z-10"
+            >
+              <button
+                onClick={() => setIsGroupModalOpen(false)}
+                className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="mb-6">
+                <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center mb-4 border border-indigo-500/30">
+                  <BrainCircuit className="text-indigo-400 animate-pulse" size={24} />
+                </div>
+                <h2 className="text-2xl font-bold text-white">Start AI Swarm Chat</h2>
+                <p className="text-gray-400 text-sm mt-1">Select multiple AI models to respond collaboratively in real-time!</p>
+              </div>
+
+              <div className="space-y-3 my-6 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
+                {[
+                  { id: 'idr-ai-v1', name: '✨ IDR AI', desc: 'Custom trained advanced Gemini model', badgeColor: 'text-amber-400 border-amber-500/20 bg-amber-500/5' },
+                  { id: 'gpt-4o', name: '🤖 GPT-4o', desc: 'OpenAI\'s flagship high-intelligence model', badgeColor: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' },
+                  { id: 'deepseek-chat', name: '⚡ DeepSeek V3', desc: 'Advanced DeepSeek reasoning & chat agent', badgeColor: 'text-blue-400 border-blue-500/20 bg-blue-500/5' },
+                  { id: 'gemini-2.5-pro', name: '🔮 Gemini 2.5 Pro', desc: 'Google\'s pro-level complex tasks agent', badgeColor: 'text-purple-400 border-purple-500/20 bg-purple-500/5' },
+                  { id: 'gemini-2.5-flash', name: '💨 Gemini 2.5 Flash', desc: 'Super fast general-purpose chatbot', badgeColor: 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5' },
+                ].map((model) => {
+                  const isChecked = selectedGroupModels.includes(model.id);
+                  return (
+                    <label
+                      key={model.id}
+                      className={`flex items-start justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none
+                        ${isChecked 
+                          ? 'bg-indigo-600/10 border-indigo-500/55 shadow-md shadow-indigo-500/5' 
+                          : 'bg-[#0b0f19] border-gray-800/80 hover:border-gray-700/80 hover:bg-[#111827]/40'
+                        }`}
+                    >
+                      <div className="flex items-start space-x-3 min-w-0 pr-3">
+                        <input
+                          type="checkbox"
+                          className="mt-1 accent-indigo-500 cursor-pointer w-4 h-4 rounded"
+                          checked={isChecked}
+                          onChange={() => {
+                            if (isChecked) {
+                              setSelectedGroupModels(prev => prev.filter(id => id !== model.id));
+                            } else {
+                              setSelectedGroupModels(prev => [...prev, model.id]);
+                            }
+                          }}
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-bold text-white tracking-wide">{model.name}</span>
+                          <span className="text-xs text-gray-500 mt-0.5 leading-relaxed">{model.desc}</span>
+                        </div>
+                      </div>
+                      <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase shrink-0 ${model.badgeColor}`}>
+                        {model.id === 'idr-ai-v1' ? 'Custom' : 'API'}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-col space-y-3">
+                <button
+                  type="button"
+                  disabled={selectedGroupModels.length < 2}
+                  onClick={() => {
+                    setAiModel(`group:${selectedGroupModels.join(',')}`);
+                    setIsGroupModalOpen(false);
+                    setNotification('⚡ Swarm Collaboration activated!');
+                    playNotificationSound();
+                    setTimeout(() => setNotification(null), 4000);
+                  }}
+                  className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2
+                    ${selectedGroupModels.length >= 2
+                      ? 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-indigo-500/20 active:scale-95 cursor-pointer'
+                      : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700/20'
+                    }`}
+                >
+                  <BrainCircuit size={18} />
+                  <span>Start Swarm Session ({selectedGroupModels.length} Models)</span>
+                </button>
+                <div className="text-[10px] text-gray-500 text-center">
+                  *Requires at least 2 models. Swarms run queries in parallel.
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

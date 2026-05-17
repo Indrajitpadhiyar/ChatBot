@@ -46,3 +46,64 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #4b5563;
 }
+
+/* ─── 3-Dot Dropdown Menu Styles ────────────────────────────────────── */
+.dropdown-box {
+  background: rgba(17, 24, 39, 0.97);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(55, 65, 81, 0.6);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.dropdown-box:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 20px rgba(99, 102, 241, 0.05);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #d1d5db;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  border: none;
+  background: transparent;
+  text-align: left;
+}
+.dropdown-item:hover {
+  background: rgba(55, 65, 81, 0.7);
+  color: #ffffff;
+}
+.dropdown-item svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.dropdown-item:hover svg {
+  color: #c7d2fe;
+}
+
+.dropdown-item-danger {
+  color: #f87171;
+}
+.dropdown-item-danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ffffff;
+}
+.dropdown-item-danger svg {
+  color: #f87171;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(55, 65, 81, 0.4);
+  margin: 6px 0;
+}

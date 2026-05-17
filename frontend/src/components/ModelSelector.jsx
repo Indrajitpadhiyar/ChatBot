@@ -14,7 +14,10 @@ const ModelSelector = ({ aiModel, setAiModel }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const selectedModelData = models.find((m) => m.id === aiModel) || models[0];
+  const isGroup = aiModel && aiModel.startsWith('group:');
+  const selectedModelData = isGroup
+    ? { id: 'group-active', name: '🧬 AI Agent Group', icon: BrainCircuit, color: 'text-indigo-400', desc: 'Multiple models running in collaboration' }
+    : (models.find((m) => m.id === aiModel) || models[0]);
   const Icon = selectedModelData.icon;
 
   useEffect(() => {

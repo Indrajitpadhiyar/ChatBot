@@ -11,6 +11,10 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  model: {
+    type: String,
+    default: null,
+  },
   timestamp: {
     type: Date,
     default: Date.now,
@@ -33,6 +37,14 @@ const chatSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
       default: null,
+    },
+    isPinned: {
+      type: Boolean,
+      default: false,
+    },
+    isArchived: {
+      type: Boolean,
+      default: false,
     },
     messages: [messageSchema],
   },
