@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Edit2, CheckCircle2, X, Sparkles } from 'lucide-react';
+import { Copy, Edit2, CheckCircle2, Download, FileText, Image, X, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getModelById } from '../constants/aiModels';
 
+const formatFileSize = (bytes = 0) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 const ChatMessage = ({ message, index, onEdit }) => {
   const isAi = message.role === 'ai';
   const modelData = getModelById(message.model);
+  const attachments = message.attachments || [];
   
   const [editedContent, setEditedContent] = useState(message.content);
   const [displayedText, setDisplayedText] = useState(isAi && message.isNew ? '' : editedContent);
@@ -126,7 +133,37 @@ const ChatMessage = ({ message, index, onEdit }) => {
                   </ReactMarkdown>
                 </div>
               ) : (
-                <div className="whitespace-pre-wrap">{message.content}</div>
+                <div className="space-y-3">
+                  {message.content && <div className="whitespace-pre-wrap">{message.content}</div>}
+                  {attachments.length > 0 && (
+                    <div className="space-y-2">
+                      {attachments.map((file, fileIndex) => {
+                        const isImage = file.mimetype?.startsWith('image/');
+                        const Icon = isImage ? Image : FileText;
+                        const fileName = file.originalName || file.filename || 'Attached file';
+
+                        return (
+                          <a
+                            key={`${fileName}-${fileIndex}`}
+                            href={file.url || undefined}
+                            target={file.url ? '_blank' : undefined}
+                            rel={file.url ? 'noreferrer' : undefined}
+                            className={`flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-3 py-2 text-left ${file.url ? 'hover:bg-white/15' : 'pointer-events-none'}`}
+                          >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10">
+                              <Icon size={16} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block max-w-[220px] truncate text-xs font-bold">{fileName}</span>
+                              <span className="block text-[10px] opacity-70">{formatFileSize(file.size)}</span>
+                            </span>
+                            {file.url && <Download size={14} className="shrink-0 opacity-70" />}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

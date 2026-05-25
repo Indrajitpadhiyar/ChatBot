@@ -1,4 +1,6 @@
 import express from 'express';
+import fs from 'fs';
+import multer from 'multer';
 import {
   sendMessage,
   getAllChats,
@@ -10,8 +12,29 @@ import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+const uploadDir = 'public/uploads/chat/';
+fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    cb(null, `${Date.now()}-${safeName}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    files: 5,
+    fileSize: 10 * 1024 * 1024,
+  },
+});
+
 // POST   /api/chat/send        → Send message & get AI reply
-router.post('/send', protect, sendMessage);
+router.post('/send', protect, upload.array('files', 5), sendMessage);
 
 // GET    /api/chat/history     → All sessions list (for sidebar)
 router.get('/history', protect, getAllChats);

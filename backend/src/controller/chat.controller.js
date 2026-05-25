@@ -78,15 +78,24 @@ const generateResponseForModel = async (modelKey, message, historyMessages) => {
 
 // ─── POST /api/chat/send ───────────────────────────────────────────────────────
 export const sendMessage = async (req, res) => {
-  const { message, chatId, aiModel, projectId, editIndex } = req.body;
+  const { message, chatId, aiModel, projectId } = req.body;
+  const editIndex = req.body.editIndex !== undefined ? Number(req.body.editIndex) : undefined;
   const userId = req.user?.userId;
+  const messageText = (message || '').trim();
+  const attachments = (req.files || []).map((file) => ({
+    originalName: file.originalname,
+    filename: file.filename,
+    mimetype: file.mimetype,
+    size: file.size,
+    url: `http://localhost:5000/public/uploads/chat/${file.filename}`,
+  }));
 
   if (!userId) {
     return res.status(401).json({ success: false, error: 'User session expired. Please re-login.' });
   }
 
-  if (!message || !message.trim()) {
-    return res.status(400).json({ success: false, error: 'Message is required.' });
+  if (!messageText && attachments.length === 0) {
+    return res.status(400).json({ success: false, error: 'Message or file is required.' });
   }
 
   try {
@@ -110,10 +119,15 @@ export const sendMessage = async (req, res) => {
       ? aiModel.replace('group:', '').split(',').filter(Boolean)
       : [aiModel || 'gemini-2.5-flash'];
 
+    const attachmentContext = attachments.length
+      ? `\n\nAttached files:\n${attachments.map((file) => `- ${file.originalName} (${file.mimetype}, ${Math.round(file.size / 1024)} KB): ${file.url}`).join('\n')}`
+      : '';
+    const promptMessage = `${messageText || 'Please review the attached file(s).'}${attachmentContext}`;
+
     // Invoke all models in parallel
     const generationPromises = modelsToInvoke.map(async (modelKey) => {
       try {
-        const reply = await generateResponseForModel(modelKey, message, historyMessages);
+        const reply = await generateResponseForModel(modelKey, promptMessage, historyMessages);
         return { success: true, model: modelKey, reply };
       } catch (err) {
         console.error(`Error generating for ${modelKey}:`, err);
@@ -134,13 +148,13 @@ export const sendMessage = async (req, res) => {
 
     if (dbAvailable) {
       if (chatSession) {
-        chatSession.messages.push({ role: 'user', content: message.trim() });
+        chatSession.messages.push({ role: 'user', content: messageText || 'Attached file(s)', attachments });
         for (const item of successfulReplies) {
           chatSession.messages.push({ role: 'ai', content: item.reply, model: item.model });
         }
         await chatSession.save();
       } else {
-        const newMessages = [{ role: 'user', content: message.trim() }];
+        const newMessages = [{ role: 'user', content: messageText || 'Attached file(s)', attachments }];
         for (const item of successfulReplies) {
           newMessages.push({ role: 'ai', content: item.reply, model: item.model });
         }
@@ -159,6 +173,7 @@ export const sendMessage = async (req, res) => {
       reply: successfulReplies[0].reply,
       replies: isGroup ? successfulReplies : null,
       model: isGroup ? null : modelsToInvoke[0],
+      attachments,
       dbAvailable,
     });
   } catch (error) {

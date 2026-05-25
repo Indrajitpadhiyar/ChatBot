@@ -283,29 +283,56 @@ function App() {
     }
   };
 
-  const handleSendMessage = async (text, editIndex = null) => {
+  const handleSendMessage = async (text, editIndex = null, files = []) => {
     if (editIndex !== null) {
       setMessages((prev) => prev.slice(0, editIndex));
     }
 
-    setMessages((prev) => [...prev, { role: 'user', content: text }]);
+    const localAttachments = files.map((file) => ({
+      originalName: file.name,
+      mimetype: file.type || 'application/octet-stream',
+      size: file.size,
+    }));
+
+    setMessages((prev) => [...prev, { role: 'user', content: text || 'Attached file(s)', attachments: localAttachments }]);
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/chat/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          message: text,
-          chatId,
-          aiModel,
-          projectId: activeProjectId,
-          editIndex,
-        }),
-      });
+      const hasFiles = files.length > 0;
+      const requestOptions = hasFiles
+        ? (() => {
+          const formData = new FormData();
+          formData.append('message', text);
+          formData.append('chatId', chatId || '');
+          formData.append('aiModel', aiModel);
+          formData.append('projectId', activeProjectId || '');
+          if (editIndex !== null) formData.append('editIndex', String(editIndex));
+          files.forEach((file) => formData.append('files', file));
+
+          return {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          };
+        })()
+        : {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            message: text,
+            chatId,
+            aiModel,
+            projectId: activeProjectId,
+            editIndex,
+          }),
+        };
+
+      const res = await fetch(`${API_URL}/chat/send`, requestOptions);
 
       if (res.status === 401) {
         handleLogout();
