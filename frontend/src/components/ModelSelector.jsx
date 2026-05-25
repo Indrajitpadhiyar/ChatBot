@@ -1,23 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Sparkles, Zap, Cpu, BrainCircuit } from 'lucide-react';
-
-const models = [
-  { id: 'idr-ai-v1', name: 'IDR AI', icon: BrainCircuit, color: 'text-emerald-400', desc: 'Your custom-trained, advanced AI model' },
-  { id: 'gpt-4o', name: 'GPT-4o (OpenRouter)', icon: Zap, color: 'text-blue-500', desc: 'OpenAI\'s flagship high-speed model' },
-  { id: 'deepseek-chat', name: 'DeepSeek', icon: Cpu, color: 'text-blue-400', desc: 'Advanced DeepSeek reasoning model' },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', icon: Zap, color: 'text-yellow-400', desc: 'Fast & efficient everyday model' },
-  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', icon: Sparkles, color: 'text-purple-400', desc: 'Most capable for complex tasks' },
-];
+import React, { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronDown } from 'lucide-react';
+import { AI_MODELS, GROUP_MODEL_SUMMARY, getModelById } from '../constants/aiModels';
 
 const ModelSelector = ({ aiModel, setAiModel }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const isGroup = aiModel && aiModel.startsWith('group:');
-  const selectedModelData = isGroup
-    ? { id: 'group-active', name: '🧬 AI Agent Group', icon: BrainCircuit, color: 'text-indigo-400', desc: 'Multiple models running in collaboration' }
-    : (models.find((m) => m.id === aiModel) || models[0]);
+  const selectedModelData = isGroup ? GROUP_MODEL_SUMMARY : (getModelById(aiModel) || AI_MODELS[0]);
   const Icon = selectedModelData.icon;
 
   useEffect(() => {
@@ -35,12 +26,13 @@ const ModelSelector = ({ aiModel, setAiModel }) => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 bg-[#1f2937]/80 hover:bg-[#374151]/80 text-gray-200 text-sm font-medium px-3.5 py-2 rounded-xl border border-[#374151]/50 shadow-sm transition-all duration-200 outline-none focus:ring-2 focus:ring-blue-500/30 group"
+        aria-expanded={isOpen}
       >
         <Icon size={16} className={`${selectedModelData.color} transition-colors`} />
         <span>{selectedModelData.name}</span>
-        <ChevronDown 
-          size={16} 
-          className={`text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+        <ChevronDown
+          size={16}
+          className={`text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
@@ -54,7 +46,7 @@ const ModelSelector = ({ aiModel, setAiModel }) => {
             className="absolute right-0 mt-2 w-64 bg-[var(--bg-panel)] backdrop-blur-xl border border-[#374151]/50 rounded-2xl shadow-xl shadow-black/50 overflow-hidden"
           >
             <div className="p-1.5 space-y-1">
-              {models.map((model) => {
+              {AI_MODELS.map((model) => {
                 const isSelected = model.id === aiModel;
                 const ModelIcon = model.icon;
                 return (
@@ -64,16 +56,16 @@ const ModelSelector = ({ aiModel, setAiModel }) => {
                       setAiModel(model.id);
                       setIsOpen(false);
                     }}
-                    className={`w-full flex items-start space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left group
-                      ${isSelected ? 'bg-blue-500/10' : 'hover:bg-[#1f2937]'}
-                    `}
+                    className={`w-full flex items-start space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left group ${
+                      isSelected ? 'bg-blue-500/10' : 'hover:bg-[#1f2937]'
+                    }`}
                   >
                     <div className={`mt-0.5 shrink-0 ${isSelected ? model.color : 'text-gray-500 group-hover:text-gray-300'}`}>
                       <ModelIcon size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-gray-200'}`}>
-                        {model.name}
+                        {model.menuName}
                       </div>
                       <div className="text-xs text-gray-500 truncate mt-0.5">
                         {model.desc}

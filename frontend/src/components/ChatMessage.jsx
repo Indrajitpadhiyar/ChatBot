@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Bot, Copy, Check, Edit2, CheckCircle2, X, Sparkles } from 'lucide-react';
+import { Copy, Edit2, CheckCircle2, X, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { getModelById } from '../constants/aiModels';
 
 const ChatMessage = ({ message, index, onEdit }) => {
   const isAi = message.role === 'ai';
+  const modelData = getModelById(message.model);
   
   const [editedContent, setEditedContent] = useState(message.content);
   const [displayedText, setDisplayedText] = useState(isAi && message.isNew ? '' : editedContent);
@@ -90,12 +92,7 @@ const ChatMessage = ({ message, index, onEdit }) => {
                           : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
                         }`}
                       >
-                        {message.model === 'gpt-4o' ? '🤖 GPT-4o' :
-                         message.model === 'deepseek-chat' ? '⚡ DeepSeek V3' :
-                         message.model === 'gemini-2.5-pro' ? '🔮 Gemini 2.5 Pro' :
-                         message.model === 'idr-ai-v1' ? '✨ IDR AI' :
-                         message.model === 'gemini-2.5-flash' ? '💨 Gemini 2.5 Flash' :
-                         message.model}
+                        {modelData?.name || message.model}
                       </span>
                     </div>
                   )}
